@@ -3,12 +3,12 @@ import { PlusCircle, Trash, PencilSquare, BoxArrowRight } from "react-bootstrap-
 import InputComponent from "../../input/InputComponent";
 import { useEffect, useState } from "react";
 import TableComponent from "../../table/TableComponent";
-import ModalAlerta from "../alertas/ModalAlerta";
 import ModalCadastrarProduto from "../cadastro/ModalCadastrarProduto";
 import type { Produto } from "../../../models/Produto";
-import { getProdutos } from "../../../services/ProdutoService";
 import ModalExcluirProduto from "../alertas/ModalExcluirProduto";
 import ModalEditarProduto from "../editar/ModalEditarProduto";
+import { useData } from "../../../contexts/DataContext";
+import { useToast } from "../../../contexts/ToastContext";
 
 interface ModalComponentProps {
     show: boolean
@@ -16,7 +16,8 @@ interface ModalComponentProps {
 }
 
 export default function ModalPesquisarProduto({ show, onHide }: ModalComponentProps) {
-    const [produtos, setProdutos] = useState<Produto[]>([])
+
+    const { produtos, loading } = useData()
 
     const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null)
     const [linhaSelecionada, setLinhaSelecionada] = useState<number | null>(null)
@@ -25,14 +26,16 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
         cadastrarProduto: false,
         sair: false,
         excluir: false,
-        produtoSelecionadoVazio: false,
         editarProduto: false
     })
+
+    const { showToast } = useToast()
 
     const modalAberta = Object.values(abrirModal).some(valor => valor === true)
 
     const [pesquisar, setPesquisar] = useState("")
-    const [opcaoPesquisa, setOpcaoPesquisa] = useState("codigo")
+    const [opcaoPesquisa, setOpcaoPesquisa] = useState<"codigo" | "descricao">("codigo")
+    const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[]>([])
 
     const fecharModal = () => {
         setPesquisar("")
@@ -41,21 +44,30 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
     }
 
     useEffect(() => {
-        if (show || modalAberta === false) {
-            carregarProdutos()
-        }
-
         if (show === false || modalAberta === true) {
             setLinhaSelecionada(null)
         }
     }, [show, modalAberta])
 
-    async function carregarProdutos() {
-        try {
-            const data = await getProdutos()
-            setProdutos(data)
-        } catch (e) {
-            console.log(e)
+
+    useEffect(() => {
+        filtrarProdutos();
+    }, [produtos, pesquisar, opcaoPesquisa]);
+
+
+    function filtrarProdutos() {
+        if (opcaoPesquisa === "descricao") {
+            const produtoCodigo = produtos.filter(produto =>
+                produto.DESCRICAO
+                    .toLowerCase().includes(pesquisar)
+            )
+            setProdutosFiltrados(produtoCodigo)
+        } else {
+            const produtoDescricao = produtos.filter(produto =>
+                String(produto.CODIGO)
+                    .toLowerCase().includes(pesquisar.toLowerCase())
+            )
+            setProdutosFiltrados(produtoDescricao)
         }
     }
 
@@ -74,62 +86,52 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
                         Pesquisar Produtos
                     </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
-                    <Row>
-                        <Col className="mb-3 d-flex gap-3">
-                            <Button variant="primary"
-                                onClick={
-                                    () => setAbrirModal({ ...abrirModal, cadastrarProduto: true })
+                <Row className="p-2">
+                    <Col className="mb-3 d-flex gap-3">
+                        <Button variant="primary"
+                            onClick={
+                                () => setAbrirModal({ ...abrirModal, cadastrarProduto: true })
+                            }
+                        >
+                            <PlusCircle className="me-2" />
+                            Adicionar
+                        </Button>
+                        <Button variant="danger"
+                            onClick={
+                                () => {
+                                    !produtoSelecionado
+                                        ? showToast("Selecione um grupo antes.", "warning")
+                                        : setAbrirModal({ ...abrirModal, excluir: true })
                                 }
-                            >
-                                <PlusCircle className="me-2" />
-                                Adicionar
-                            </Button>
-                            <Button variant="danger"
-                                onClick={
-                                    () => {
-                                        if (!produtoSelecionado) {
-                                            setAbrirModal({ ...abrirModal, produtoSelecionadoVazio: true })
-                                        } else {
-                                            setAbrirModal({ ...abrirModal, excluir: true })
-                                        }
-                                    }
-                                }
-                            >
-                                <Trash className="me-2" />
-                                Remover
-                            </Button>
-                            <Button variant="secondary"
-                                onClick={() => {
-                                    if (!produtoSelecionado) {
-                                        setAbrirModal({
-                                            ...abrirModal,
-                                            produtoSelecionadoVazio: true
-                                        })
-                                    } else {
-                                        setAbrirModal({
-                                            ...abrirModal,
-                                            editarProduto: true
-                                        })
-                                    }
-                                }}
-                            >
-                                <PencilSquare className="me-2" />
-                                Alterar
-                            </Button>
+                            }
+                        >
+                            <Trash className="me-2" />
+                            Remover
+                        </Button>
+                        <Button variant="secondary"
+                            onClick={() => {
+                                !produtoSelecionado
+                                    ? showToast("Selecione um grupo antes.", "warning")
+                                    : setAbrirModal({ ...abrirModal, editarProduto: true })
+                            }}
+                        >
+                            <PencilSquare className="me-2" />
+                            Alterar
+                        </Button>
 
-                        </Col>
-                        <Col className="d-flex justify-content-end">
-                            <div>
-                                <Button variant="danger"
-                                    onClick={onHide}
-                                >
-                                    <BoxArrowRight className="me-2" />
-                                    sair
-                                </Button>
-                            </div>
-                        </Col>
-                    </Row>
+                    </Col>
+                    <Col className="d-flex justify-content-end">
+                        <div>
+                            <Button variant="danger"
+                                onClick={onHide}
+                            >
+                                <BoxArrowRight className="me-2" />
+                                sair
+                            </Button>
+                        </div>
+                    </Col>
+                </Row>
+                <Modal.Body>
                     <Card className="mb-3">
                         <Card.Body>
                             <div className=" gap-5">
@@ -141,19 +143,15 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
                                             id="pesquisar-codigo"
                                             type="radio"
                                             label="Código"
-                                            name="pesquisa"
-                                            value="codigo"
                                             checked={opcaoPesquisa === "codigo"}
-                                            onChange={(e) => setOpcaoPesquisa(e.target.value)}
+                                            onChange={() => setOpcaoPesquisa("codigo")}
                                         />
                                         <Form.Check
                                             id="pesquisar-descricao"
                                             type="radio"
                                             label="Descrição"
-                                            name="pesquisa"
-                                            value="descricao"
                                             checked={opcaoPesquisa === "descricao"}
-                                            onChange={(e) => setOpcaoPesquisa(e.target.value)}
+                                            onChange={() => setOpcaoPesquisa("descricao")}
                                         />
                                     </div>
                                 </div>
@@ -179,7 +177,7 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
                                     "Data do cadastro",
                                     "Valor"
                                 ]}
-                                dados={produtos.map(g => [
+                                dados={produtosFiltrados.map(g => [
                                     String(g.CODIGO),
                                     g.DESCRICAO,
                                     String(g.CODIGO_GRUPO),
@@ -191,6 +189,7 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
                                     setProdutoSelecionado(produtos[index])
                                 }}
                                 linhaSelecionada={linhaSelecionada}
+                                loading={loading}
                             />
                         </Card.Body>
                     </Card>
@@ -199,21 +198,6 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
             <ModalCadastrarProduto
                 show={abrirModal.cadastrarProduto}
                 onHide={() => setAbrirModal({ ...abrirModal, cadastrarProduto: false })}
-            />
-            <ModalAlerta
-                show={abrirModal.sair}
-                onHide={() => setAbrirModal({ ...abrirModal, sair: false })}
-                buttonConfirmar={() => setAbrirModal({ ...abrirModal, sair: false })}
-                text="Deseja sair do sistema?"
-                textButtonConfirmar="Sim"
-                textButtonRecusar="Não"
-            />
-            <ModalAlerta
-                show={abrirModal.produtoSelecionadoVazio}
-                onHide={() => setAbrirModal({ ...abrirModal, produtoSelecionadoVazio: false })}
-                buttonConfirmar={() => setAbrirModal({ ...abrirModal, produtoSelecionadoVazio: false })}
-                text="Selecione um grupo antes."
-                textButtonConfirmar="Ok"
             />
             {produtoSelecionado && (
                 <ModalExcluirProduto

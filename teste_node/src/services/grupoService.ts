@@ -155,17 +155,26 @@ class GrupoService {
                 ) => {
 
                     db.detach()
-
                     if (err) {
+
+                        if (err.message.includes("FK_PRODUTO_GRUPO")) {
+                            reject(
+                                new HttpError(
+                                    409,
+                                    "Não é possível excluir este grupo, pois existem produtos vinculados a ele."
+                                )
+                            );
+                            return;
+                        }
 
                         reject(
                             new HttpError(
                                 500,
                                 err.message
                             )
-                        )
+                        );
 
-                        return
+                        return;
                     }
 
                     if (!result || result.length === 0) {

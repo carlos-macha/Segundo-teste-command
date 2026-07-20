@@ -7,11 +7,13 @@ import FooterComponent from "../../components/footer/FooterComponent"
 import ModalPesquisarGrupo from "../../components/modals/pesquisa/ModalPesquisarGrupo"
 import ModalPesquisarProduto from "../../components/modals/pesquisa/ModalPesquisarProduto"
 import ModalAlerta from "../../components/modals/alertas/ModalAlerta"
+import ModalAtualizarPreco from "../../components/modals/atualizacao/ModalAtualizarPreco"
 
 export default function Home() {
     const [abrirModal, setAbrirModal] = useState({
         pesquisarGrupo: false,
         pesquisarProduto: false,
+        atualizarPreco: false,
         sair: false
     })
 
@@ -46,7 +48,11 @@ export default function Home() {
                                         </Button>
                                     </Col>
                                     <Col xs={6} md="auto">
-                                        <Button variant="primary">
+                                        <Button variant="primary"
+                                            onClick={() => setAbrirModal({
+                                                ...abrirModal, atualizarPreco: true
+                                            })}
+                                        >
                                             <Gear className="me-2" />
                                             Atualização
                                         </Button>
@@ -83,6 +89,10 @@ export default function Home() {
                 text="Deseja sair do sistema?"
                 textButtonConfirmar="Sim"
                 textButtonRecusar="Não"
+            />
+            <ModalAtualizarPreco
+                show={abrirModal.atualizarPreco}
+                onHide={() => setAbrirModal({ ...abrirModal, atualizarPreco: false })}
             />
         </div>
 

@@ -1,3 +1,19 @@
 .modal-desativada {
     filter: brightness(60%);
 }
+
+.modal-body-loading {
+    position: relative;
+}
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 1000;
+}

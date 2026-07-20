@@ -4,11 +4,11 @@ import TableComponent from "../../table/TableComponent";
 import { useEffect, useState } from "react";
 import ModalCadastrarGrupo from "../cadastro/ModalCadastrarGrupo";
 import "../Modal.css"
-import ModalAlerta from "../alertas/ModalAlerta";
 import type { Grupo } from "../../../models/Grupo";
-import { getGrupos } from "../../../services/GrupoServise";
 import ModalExcluirGrupo from "../alertas/ModalExcluirGrupo";
 import ModalEditarGrupo from "../editar/ModalEditarGrupo";
+import { useData } from "../../../contexts/DataContext";
+import { useToast } from "../../../contexts/ToastContext";
 
 interface ModalComponentProps {
     show: boolean
@@ -16,38 +16,28 @@ interface ModalComponentProps {
 }
 
 export default function ModalPesquisarGrupo({ show, onHide }: ModalComponentProps) {
-    const [grupos, setGrupos] = useState<Grupo[]>([])
+
+    const { grupos, loading } = useData()
 
     const [abrirModal, setAbrirModal] = useState({
         cadastrarGrupo: false,
-        grupoSelecionadoVazio: false,
         excluir: false,
         editar: false
     })
+
+    const { showToast } = useToast()
 
     const [grupoSelecionado, setGrupoSelecionado] = useState<Grupo | null>(null)
     const [linhaSelecionada, setLinhaSelecionada] = useState<number | null>(null)
 
     const modalAberta = Object.values(abrirModal).some(valor => valor === true)
 
-    useEffect(() => {
-        if (show || modalAberta === false) {
-            carregarGrupos()
-        }
 
+    useEffect(() => {
         if (show === false || modalAberta === true) {
             setLinhaSelecionada(null)
         }
     }, [show, modalAberta])
-
-    async function carregarGrupos() {
-        try {
-            const data = await getGrupos()
-            setGrupos(data)
-        } catch (e) {
-            console.error(e)
-        }
-    }
 
     return (
         <>
@@ -60,67 +50,66 @@ export default function ModalPesquisarGrupo({ show, onHide }: ModalComponentProp
                 size="lg"
                 aria-labelledby="contained-modal-title-vcenter"
                 centered
+                scrollable
                 className={modalAberta ? "modal-desativada" : ""}>
                 <Modal.Header closeButton>
                     <Modal.Title id="contained-modal-title-vcenter">
                         Pesquisar grupos
                     </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
-                    <Row>
-                        <Col className="mb-3 d-flex gap-3">
-                            <Button variant="primary"
-                                onClick={() => setAbrirModal({ ...abrirModal, cadastrarGrupo: true })}
-                            >
-                                <PlusCircle className="me-2" />
-                                Adicionar
-                            </Button>
-                            <Button variant="danger"
-                                onClick={
-                                    () => {
-                                        if (!grupoSelecionado) {
-                                            setAbrirModal({ ...abrirModal, grupoSelecionadoVazio: true })
-                                        } else {
-                                            setAbrirModal({ ...abrirModal, excluir: true })
-                                        }
-                                    }
+                <Row className="p-2">
+                    <Col className="mb-3 d-flex gap-3">
+                        <Button variant="primary"
+                            onClick={() => setAbrirModal({ ...abrirModal, cadastrarGrupo: true })}
+                        >
+                            <PlusCircle className="me-2" />
+                            Adicionar
+                        </Button>
+                        <Button variant="danger"
+                            onClick={
+                                () => {
+                                    !grupoSelecionado ?
+                                        showToast("Selecione um grupo antes.", "warning")
+                                        :
+                                        setAbrirModal({
+                                            ...abrirModal,
+                                            excluir: true
+                                        })
                                 }
-                            >
-                                <Trash className="me-2" />
-                                Remover
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={() => {
-                                    if (!grupoSelecionado) {
-                                        setAbrirModal({
-                                            ...abrirModal,
-                                            grupoSelecionadoVazio: true
-                                        })
-                                    } else {
-                                        setAbrirModal({
-                                            ...abrirModal,
-                                            editar: true
-                                        })
-                                    }
-                                }}
-                            >
-                                <PencilSquare className="me-2" />
-                                Alterar
-                            </Button>
+                            }
+                        >
+                            <Trash className="me-2" />
+                            Remover
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                !grupoSelecionado ?
+                                    showToast("Selecione um grupo antes.", "warning")
+                                    :
+                                    setAbrirModal({
+                                        ...abrirModal,
+                                        editar: true
+                                    })
+                            }}
+                        >
+                            <PencilSquare className="me-2" />
+                            Alterar
+                        </Button>
 
-                        </Col>
-                        <Col className="d-flex justify-content-end">
-                            <div>
-                                <Button variant="danger"
-                                    onClick={onHide}
-                                >
-                                    <BoxArrowRight className="me-2" />
-                                    sair
-                                </Button>
-                            </div>
-                        </Col>
-                    </Row>
+                    </Col>
+                    <Col className="d-flex justify-content-end">
+                        <div>
+                            <Button variant="danger"
+                                onClick={onHide}
+                            >
+                                <BoxArrowRight className="me-2" />
+                                sair
+                            </Button>
+                        </div>
+                    </Col>
+                </Row>
+                <Modal.Body>
                     <Card>
                         <Card.Body>
                             <Card.Title>
@@ -140,6 +129,7 @@ export default function ModalPesquisarGrupo({ show, onHide }: ModalComponentProp
                                     setGrupoSelecionado(grupos[index])
                                 }}
                                 linhaSelecionada={linhaSelecionada}
+                                loading={loading}
                             ></TableComponent>
                         </Card.Body>
                     </Card>
@@ -148,13 +138,6 @@ export default function ModalPesquisarGrupo({ show, onHide }: ModalComponentProp
             <ModalCadastrarGrupo
                 show={abrirModal.cadastrarGrupo}
                 onHide={() => setAbrirModal({ ...abrirModal, cadastrarGrupo: false })}
-            />
-            <ModalAlerta
-                show={abrirModal.grupoSelecionadoVazio}
-                onHide={() => setAbrirModal({ ...abrirModal, grupoSelecionadoVazio: false })}
-                buttonConfirmar={() => setAbrirModal({ ...abrirModal, grupoSelecionadoVazio: false })}
-                text="Selecione um grupo antes."
-                textButtonConfirmar="Ok"
             />
             {grupoSelecionado && (
                 <ModalExcluirGrupo

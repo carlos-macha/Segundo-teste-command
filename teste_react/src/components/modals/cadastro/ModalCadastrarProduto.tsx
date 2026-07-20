@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Button, Col, Modal, Row } from "react-bootstrap";
+import { Button, Col, Modal, Row, Spinner } from "react-bootstrap";
 import InputComponent from "../../input/InputComponent";
 import ModalSelecionarGrupo from "../pesquisa/ModalSelecionarGrupo";
 import type { Grupo } from "../../../models/Grupo";
 import { criarProduto } from "../../../services/ProdutoService";
+import { useData } from "../../../contexts/DataContext"
+import { useToast } from "../../../contexts/ToastContext";
 
 interface ModalComponentProps {
     show: boolean
@@ -11,13 +13,19 @@ interface ModalComponentProps {
 }
 
 export default function ModalCadastrarProduto({ show, onHide }: ModalComponentProps) {
+    const {carregarProdutos} = useData()
     const [abrirModal, setAbrirModal] = useState({
         pesquisarGrupo: false
     })
 
+    const { showToast } = useToast()
+
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState({ descricao: "", grupo: "", valor: "" })
+
     const modalAberta = Object.values(abrirModal).some(valor => valor === true)
 
-    const [ grupoSelecionado, setGrupoSelecionado ] = useState<Grupo | null>(null)
+    const [grupoSelecionado, setGrupoSelecionado] = useState<Grupo | null>(null)
 
     const [form, setForm] = useState({ descricao: "", valor: "" })
 
@@ -27,21 +35,48 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
             valor: ""
         })
         setGrupoSelecionado(null)
+
+        setError({
+            descricao: "",
+            grupo: "",
+            valor: ""
+        })
     }
+
 
     const fecharModal = () => {
         limparCampos()
-        onHide()
         setGrupoSelecionado(null)
+        onHide()
+    }
+
+    function validarFormulario() {
+        if (!form.descricao) {
+            setError({ ...error, descricao: "Descrição é obrigatório" })
+            return
+        } else if (!grupoSelecionado) {
+            setError({ ...error, grupo: "Grupo é obrigatório" })
+        } else if (!form.valor || Number(form.valor) < 0) {
+            setError({ ...error, valor: "Valor não pode ser menor que zero" })
+        }
+
+        return true
     }
 
     async function handleCriarProduto() {
+        if (!validarFormulario()) return
+
         try {
+            setLoading(true)
             await criarProduto(form.descricao, grupoSelecionado?.CODIGO!, Number(form.valor))
+            await carregarProdutos()
             limparCampos()
+            showToast("Produto cadastrado com sucesso!", "success")
             fecharModal()
         } catch (e) {
-            console.log(e)
+            showToast("Erro ao cadastrar produto.", "danger")
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -59,10 +94,16 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
                         Cadastro de Produtos
                     </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="modal-body-loading">
+                    {loading && (
+                        <div className="loading-overlay">
+                            <Spinner animation="border" />
+                        </div>
+                    )}
                     <div className="mb-3 d-flex gap-3">
                         <Button variant="primary"
                             onClick={handleCriarProduto}
+                            disabled={loading}
                         >
                             Gravar
                         </Button>
@@ -74,6 +115,7 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
                                 text="Descrição"
                                 type="text"
                                 value={form.descricao}
+                                error={error.descricao}
                                 onChange={(e) => setForm({
                                     ...form,
                                     descricao: e.target.value
@@ -88,13 +130,14 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
                                 text="Grupo"
                                 type="number"
                                 value={grupoSelecionado ? String(grupoSelecionado.CODIGO) : ""}
+                                error={error.grupo}
                                 rightText={grupoSelecionado ? grupoSelecionado.DESCRICAO : ""}
                                 buttonText="Selecionar grupo"
                                 bloqueado={true}
                                 onClick={() => setAbrirModal({
                                     ...abrirModal, pesquisarGrupo: true
                                 })}
-                                onChange={() => {}}
+                                onChange={() => { }}
                             />
                         </Col>
                     </Row>
@@ -105,6 +148,7 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
                                 text="Valor"
                                 type="number"
                                 value={form.valor}
+                                error={error.valor}
                                 onChange={(e) => setForm({
                                     ...form,
                                     valor: e.target.value
@@ -114,10 +158,10 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
                     </Row>
                 </Modal.Body>
             </Modal>
-            <ModalSelecionarGrupo 
+            <ModalSelecionarGrupo
                 show={abrirModal.pesquisarGrupo}
                 onHide={() => setAbrirModal({ ...abrirModal, pesquisarGrupo: false })}
-                onSelect={(grupo) => {setGrupoSelecionado(grupo)}}
+                onSelect={(grupo) => { setGrupoSelecionado(grupo) }}
             />
         </>
     )

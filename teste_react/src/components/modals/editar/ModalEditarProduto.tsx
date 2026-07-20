@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Button, Col, Modal, Row } from "react-bootstrap";
+import { Button, Col, Modal, Row, Spinner } from "react-bootstrap";
 import InputComponent from "../../input/InputComponent";
 import ModalSelecionarGrupo from "../pesquisa/ModalSelecionarGrupo";
 import type { Grupo } from "../../../models/Grupo";
 import { editarProduto } from "../../../services/ProdutoService";
 import type { Produto } from "../../../models/Produto";
-import { pesquisarPeloCodigo } from "../../../services/GrupoServise";
+import { useData } from "../../../contexts/DataContext"
+import { useToast } from "../../../contexts/ToastContext";
 
 interface ModalComponentProps {
     show: boolean
@@ -14,13 +15,19 @@ interface ModalComponentProps {
 }
 
 export default function ModalEditarProduto({ show, onHide, produto }: ModalComponentProps) {
+    const {carregarProdutos, grupos} = useData()
     const [abrirModal, setAbrirModal] = useState({
         pesquisarGrupo: false
     })
 
+    const { showToast } = useToast()
+
     const modalAberta = Object.values(abrirModal).some(valor => valor === true)
 
     const [grupoSelecionado, setGrupoSelecionado] = useState<Grupo | null>(null)
+
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState({ descricao: "", grupo: "", valor: "" })
 
     const [form, setForm] = useState({
         codigo: String(produto.CODIGO),
@@ -35,6 +42,12 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
             valor: ""
         })
         setGrupoSelecionado(null)
+
+        setError({
+            descricao: "",
+            grupo: "",
+            valor: ""
+        })
     }
 
     const fecharModal = () => {
@@ -47,23 +60,39 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
         if (show) handlePesquisarGrupo()
     }, [show])
 
+    function validarFormulario() {
+        if (!form.descricao) {
+            setError({ ...error, descricao: "Descrição é obrigatório" })
+            return
+        } else if (!grupoSelecionado) {
+            setError({ ...error, grupo: "Grupo é obrigatório" })
+        } else if (!form.valor || Number(form.valor) < 0) {
+            setError({ ...error, valor: "Valor não pode ser menor que zero" })
+        }
+
+        return true
+    }
+
     async function handleEditarProduto() {
+        if (!validarFormulario()) return
+
         try {
+            setLoading(true)
             await editarProduto(produto.CODIGO, form.descricao, grupoSelecionado?.CODIGO!, Number(form.valor))
+            await carregarProdutos()
             limparCampos()
+            showToast("Produto editado com sucesso!", "success")
             fecharModal()
         } catch (e) {
-            console.log(e)
+            showToast("Erro ao editar produto.", "danger")
+        } finally {
+            setLoading(false)
         }
     }
 
     async function handlePesquisarGrupo() {
-        try {
-            const grupo = await pesquisarPeloCodigo(produto.CODIGO_GRUPO)
-            setGrupoSelecionado(grupo)
-        } catch (e) {
-            console.log(e)
-        }
+        const grupo = grupos.find(grupo => grupo.CODIGO === produto.CODIGO_GRUPO)
+        if (grupo) setGrupoSelecionado(grupo)    
     }
 
     return (
@@ -80,10 +109,16 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
                         Editar produto
                     </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="modal-body-loading">
+                    {loading && (
+                        <div className="loading-overlay">
+                            <Spinner animation="border" />
+                        </div>
+                    )}
                     <div className="mb-3 d-flex gap-3">
                         <Button variant="primary"
                             onClick={handleEditarProduto}
+                            disabled={loading}
                         >
                             Gravar
                         </Button>
@@ -97,7 +132,7 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
                                 type="number"
                                 value={form.codigo}
                                 bloqueado={true}
-                                onChange={() => {}}
+                                onChange={() => { }}
                             />
                         </Col>
                     </Row>
@@ -108,6 +143,7 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
                                 text="Descrição"
                                 type="text"
                                 value={form.descricao}
+                                error={error.descricao}
                                 onChange={(e) => setForm({
                                     ...form,
                                     descricao: e.target.value
@@ -122,6 +158,7 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
                                 text="Grupo"
                                 type="number"
                                 value={grupoSelecionado ? String(grupoSelecionado.CODIGO) : ""}
+                                error={error.grupo}
                                 rightText={grupoSelecionado ? grupoSelecionado.DESCRICAO : ""}
                                 buttonText="Selecionar grupo"
                                 bloqueado={true}
@@ -139,6 +176,7 @@ export default function ModalEditarProduto({ show, onHide, produto }: ModalCompo
                                 text="Valor"
                                 type="number"
                                 value={form.valor}
+                                error={error.valor}
                                 onChange={(e) => setForm({
                                     ...form,
                                     valor: e.target.value
