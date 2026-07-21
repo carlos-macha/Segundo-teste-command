@@ -243,62 +243,62 @@ class ProdutoService {
         percentual: number
     ): Promise<Produto[]> {
 
-        const db = await connectDatabase()
+        const db = await connectDatabase();
 
         return new Promise((resolve, reject) => {
 
             const fator = percentual / 100;
 
-            let calculo = "";
+            const calculo =
+                operacao === "aumentar"
+                    ? "VALOR + (VALOR * ?)"
+                    : `
+                    CASE
+                        WHEN VALOR - (VALOR * ?) < 0 THEN 0
+                        ELSE VALOR - (VALOR * ?)
+                    END
+                `;
 
-            if (operacao === "aumentar") {
-
-                calculo = `
-                VALOR + (VALOR * ?)
-            `;
-
-            } else {
-
-                calculo = `
-                VALOR - (VALOR * ?)
-            `;
-            }
-
+            const parametros =
+                operacao === "aumentar"
+                    ? [
+                        fator,
+                        ...grupos
+                    ]
+                    : [
+                        fator,
+                        fator,
+                        ...grupos
+                    ];
 
             db.query(
                 `
             UPDATE PRODUTO
             SET VALOR = ${calculo}
             WHERE CODIGO_GRUPO IN (${grupos.map(() => "?").join(",")})
-            RETURNING 
+            RETURNING
                 CODIGO,
                 DESCRICAO,
                 CODIGO_GRUPO,
                 DATA_CADASTRO,
                 VALOR
             `,
-                [
-                    fator,
-                    ...grupos
-                ],
-
+                parametros,
                 (
                     err: Error | null,
                     result: Produto[]
                 ) => {
 
-                    db.detach()
+                    db.detach();
 
                     if (err) {
-
                         reject(
                             new HttpError(
                                 500,
                                 err.message
                             )
-                        )
-
-                        return
+                        );
+                        return;
                     }
 
                     if (!result || result.length === 0) {
@@ -307,16 +307,14 @@ class ProdutoService {
                                 404,
                                 "Nenhum produto foi encontrado para os grupos informados."
                             )
-                        )
-                        
-                        return
+                        );
+                        return;
                     }
 
-
-                    resolve(result)
+                    resolve(result);
                 }
-            )
-        })
+            );
+        });
     }
 
 }
