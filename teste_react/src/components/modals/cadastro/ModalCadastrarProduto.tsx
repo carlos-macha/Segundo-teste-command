@@ -53,11 +53,13 @@ export default function ModalCadastrarProduto({ show, onHide }: ModalComponentPr
     function validarFormulario() {
         if (!form.descricao) {
             setError({ ...error, descricao: "Descrição é obrigatório" })
-            return
+            return false
         } else if (!grupoSelecionado) {
             setError({ ...error, grupo: "Grupo é obrigatório" })
+            return false
         } else if (!form.valor || Number(form.valor) < 0) {
             setError({ ...error, valor: "Valor não pode ser menor que zero" })
+            return false
         }
 
         return true

@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Grupo } from "../models/Grupo";
 
-const API_URL = "http://localhost:3000/grupos";
+const API_URL = `${import.meta.env.VITE_API_URL ?? "http://localhost:3000"}/grupos`;
 
 const api = axios.create({
     baseURL: API_URL,

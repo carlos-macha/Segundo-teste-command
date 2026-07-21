@@ -3,6 +3,7 @@ import {
     Response,
     NextFunction
 } from "express"
+import { ZodError } from "zod"
 
 const errorHandler = (
     error: any,
@@ -12,6 +13,19 @@ const errorHandler = (
 ) => {
 
     console.error(error)
+
+    if (error instanceof ZodError) {
+
+        return res.status(400).json({
+            error: {
+                message: "Erro de validação.",
+                issues: error.issues.map(issue => ({
+                    campo: issue.path.join("."),
+                    mensagem: issue.message
+                }))
+            }
+        })
+    }
 
     const status =
         error.status || 500

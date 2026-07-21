@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Produto } from "../models/Produto";
 
-const API_URL = "http://localhost:3000/produtos";
+const API_URL = `${import.meta.env.VITE_API_URL ?? "http://localhost:3000"}/produtos`
 
 const api = axios.create({
     baseURL: API_URL,

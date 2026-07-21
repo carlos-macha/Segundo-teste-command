@@ -99,7 +99,7 @@ export default function ModalEditarGrupo({ show, grupo, onHide }: ModalComponent
 
                     <div className="mb-3 d-flex gap-3">
                         <Button variant="primary" onClick={handleEditarGrupo} disabled={loading}>Gravar</Button>
-                        <Button variant="danger" onClick={limparCampos}>Cancelar</Button>
+                        <Button variant="danger" onClick={fecharModal}>Cancelar</Button>
                     </div>
                     <InputComponent
                         text="Codigo"

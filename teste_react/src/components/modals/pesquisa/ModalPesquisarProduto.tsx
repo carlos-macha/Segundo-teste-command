@@ -100,7 +100,7 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
                             onClick={
                                 () => {
                                     !produtoSelecionado
-                                        ? showToast("Selecione um grupo antes.", "warning")
+                                        ? showToast("Selecione um produto antes.", "warning")
                                         : setAbrirModal({ ...abrirModal, excluir: true })
                                 }
                             }
@@ -111,7 +111,7 @@ export default function ModalPesquisarProduto({ show, onHide }: ModalComponentPr
                         <Button variant="secondary"
                             onClick={() => {
                                 !produtoSelecionado
-                                    ? showToast("Selecione um grupo antes.", "warning")
+                                    ? showToast("Selecione um produto antes.", "warning")
                                     : setAbrirModal({ ...abrirModal, editarProduto: true })
                             }}
                         >
