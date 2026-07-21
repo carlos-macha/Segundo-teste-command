@@ -18,6 +18,12 @@ export interface ProdutoBody {
     VALOR: number
 }
 
+export interface AtualizarPrecoBody {
+    GRUPOS: number[]
+    OPERACAO: "aumentar" | "diminuir"
+    PERCENTUAL: number
+}
+
 export interface ProdutoParams {
 
     codigo: string

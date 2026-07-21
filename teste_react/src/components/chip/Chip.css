@@ -1,0 +1,12 @@
+.chip-grupo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.chip-grupo .btn-close {
+    transform: scale(.7);
+}

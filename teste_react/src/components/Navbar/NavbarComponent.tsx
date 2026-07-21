@@ -6,6 +6,7 @@ import ModalPesquisarGrupo from '../modals/pesquisa/ModalPesquisarGrupo';
 import ModalPesquisarProduto from '../modals/pesquisa/ModalPesquisarProduto';
 import ModalAlerta from '../modals/alertas/ModalAlerta';
 import ModalAtualizarPreco from '../modals/atualizacao/ModalAtualizarPreco';
+import ModalAnaliseProdutos from '../modals/analise/ModalAnaliseProdutos';
 
 export default function NavbarComponent() {
     const [abrirModal, setAbrirModal] = useState({
@@ -14,6 +15,7 @@ export default function NavbarComponent() {
         pesquisarGrupo: false,
         pesquisarProduto: false,
         atualizarPreco: false,
+        analiseProdutos: false,
         sair: false
     })
 
@@ -47,7 +49,15 @@ export default function NavbarComponent() {
                         <NavDropdown.Item onClick={() => setAbrirModal({
                             ...abrirModal, atualizarPreco: true
                         })}
-                        >Atualizar preço</NavDropdown.Item>
+                        >
+                            Atualizar preço
+                        </NavDropdown.Item>
+                        <NavDropdown.Item onClick={() => setAbrirModal({
+                            ...abrirModal, analiseProdutos: true
+                        })}
+                        >
+                            Análise dos Produtos
+                        </NavDropdown.Item>
                     </NavDropdown>
                     <Nav className="me-auto">
                         <Nav.Link onClick={() => setAbrirModal({
@@ -86,6 +96,10 @@ export default function NavbarComponent() {
             <ModalAtualizarPreco
                 show={abrirModal.atualizarPreco}
                 onHide={() => setAbrirModal({ ...abrirModal, atualizarPreco: false })}
+            />
+            <ModalAnaliseProdutos 
+                show={abrirModal.analiseProdutos}
+                onHide={() => setAbrirModal({ ...abrirModal, analiseProdutos: false })}
             />
         </>
     );

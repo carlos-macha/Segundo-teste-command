@@ -20,6 +20,11 @@ produtoRouter.post(
 )
 
 produtoRouter.put(
+    "/produtos/atualizar-precos",
+    produtoController.atualizarPrecos.bind(produtoController)
+)
+
+produtoRouter.put(
     '/produtos/:codigo',
     produtoController.editarProduto.bind(produtoController)
 )

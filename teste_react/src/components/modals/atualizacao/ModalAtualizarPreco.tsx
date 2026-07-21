@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Button, Card, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import InputComponent from "../../input/InputComponent";
 import type { Grupo } from "../../../models/Grupo";
-import ModalSelecionarGrupo from "../pesquisa/ModalSelecionarGrupo";
 import { BoxArrowRight, Gear } from "react-bootstrap-icons";
 import TableComponent from "../../table/TableComponent";
 import type { Produto } from "../../../models/Produto";
 import { useData } from "../../../contexts/DataContext";
+import ModalSelecionarVariosGrupos from "../pesquisa/ModalSelecionarVariosGrupos";
+import ChipGrupo from "../../chip/ChipGrupo";
+import { atualizarPreco } from "../../../services/ProdutoService";
+import axios from "axios";
+import { useToast } from "../../../contexts/ToastContext";
 
 interface ModalComponentProps {
     show: boolean;
@@ -20,66 +24,108 @@ export default function ModalAtualizarPreco({
 
     const [opcao, setOpcao] = useState<"aumentar" | "diminuir">("aumentar");
 
-    const [grupoInicial, setGrupoInicial] = useState<Grupo | null>(null);
-    const [grupoFinal, setGrupoFinal] = useState<Grupo | null>(null);
-    const [fator, setFator] = useState("")
+    const [modalSelecionarGrupos, setModalSelecionarGrupos] = useState(false)
+
+    const [percentual, setPercentual] = useState("")
+
+    const [loadingAtuaalizacao, setLoadingAtuaalizacao] = useState(false)
+
 
     const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[]>([])
+    const [gruposSelecionados, setGruposSelecionados] = useState<Grupo[]>([]);
     const { produtos, loading } = useData()
-
-    const [campoSelecionado, setCampoSelecionado] = useState<
-        "inicial" | "final"
-    >("inicial");
-
-    const [abrirModal, setAbrirModal] = useState({
-        pesquisarGrupo: false
-    });
+    const { showToast } = useToast()
 
     const [error, setError] = useState({
-        grupoInicial: "",
-        grupoFinal: "",
         fator: ""
     });
 
     const limparCampos = () => {
-        setGrupoInicial(null)
-        setGrupoFinal(null)
-        setFator("")
+        setPercentual("")
 
         setError({
-            grupoInicial: "",
-            grupoFinal: "",
             fator: ""
         })
     }
 
-    function validarFormulario() {
-        if (!grupoInicial) {
-            setError({ ...error, grupoInicial: "Grupo inicial é obrigatório" })
+    function fecharModal() {
+        limparCampos()
+        setGruposSelecionados([])
+        onHide()
+    }
+
+    useEffect(() => {
+        if (gruposSelecionados.length === 0) {
+            setProdutosFiltrados([])
             return
-        } else if (!grupoFinal) {
-            setError({ ...error, grupoFinal: "Grupo final é obrigatório" })
-        } else if (!fator || Number(fator) < 0) {
+        }
+
+        const resultado = produtos.filter(produto =>
+            gruposSelecionados.some(grupo =>
+                grupo.CODIGO === produto.CODIGO_GRUPO
+            )
+        )
+
+        setProdutosFiltrados(resultado)
+
+    }, [gruposSelecionados, produtos])
+
+    function validarFormulario() {
+        if (!percentual || Number(percentual) < 0) {
             setError({ ...error, fator: "Fator tem que ser maior que zero" })
+            return false
+        } else if (gruposSelecionados.length === 0) {
+            showToast("Selecione um grupo antes.", "warning")
+            return false
         }
 
         return true
+    }
+
+    async function handleAtualizarPreceos() {
+        if (!validarFormulario()) return
+
+        const grupos = gruposSelecionados.map(g => g.CODIGO)
+
+        try {
+            setLoadingAtuaalizacao(true)
+            await atualizarPreco(grupos, opcao, Number(percentual))
+            showToast("Sucesso em atualizar preço.", "success")
+            fecharModal()
+        } catch (e) {
+
+            if (axios.isAxiosError(e)) {
+                showToast(
+                    e.response?.data?.error?.message ?? "Erro ao atualizar preço.",
+                    "danger"
+                )
+            } else {
+                showToast("Erro inesperado ao atualizar preço.", "danger")
+            }
+
+        } finally {
+            setLoadingAtuaalizacao(false)
+        }
+    }
+
+    function removerGrupo(grupo: Grupo) {
+
+        setGruposSelecionados(anterior =>
+            anterior.filter(g => g.CODIGO !== grupo.CODIGO)
+        );
     }
 
     return (
         <>
             <Modal
                 show={show}
-                onHide={() => {
-                    limparCampos()
-                    onHide()
-                }}
+                onHide={fecharModal}
                 size="lg"
                 aria-labelledby="contained-modal-title-vcenter"
                 centered
                 scrollable
                 className={
-                    abrirModal.pesquisarGrupo
+                    modalSelecionarGrupos
                         ? "modal-desativada"
                         : ""
                 }
@@ -90,7 +136,12 @@ export default function ModalAtualizarPreco({
                     </Modal.Title>
                 </Modal.Header>
 
-                <Modal.Body>
+                <Modal.Body className="modal-body-loading">
+                    {loadingAtuaalizacao && (
+                        <div className="loading-overlay">
+                            <Spinner animation="border" />
+                        </div>
+                    )}
 
                     <Card className="mb-3">
                         <Card.Header>
@@ -119,73 +170,39 @@ export default function ModalAtualizarPreco({
                     <Card className="mb-3">
                         <Card.Body>
 
-                            <Row>
-                                <Col md={8}>
-                                    <InputComponent
-                                        text="Grupo inicial"
-                                        type="number"
-                                        value={
-                                            grupoInicial
-                                                ? String(grupoInicial.CODIGO)
-                                                : ""
-                                        }
-                                        error={error.grupoInicial}
-                                        rightText={
-                                            grupoInicial
-                                                ? grupoInicial.DESCRICAO
-                                                : ""
-                                        }
-                                        buttonText="Selecionar grupo"
-                                        bloqueado
-                                        onClick={() => {
-                                            setCampoSelecionado("inicial");
-                                            setAbrirModal({
-                                                pesquisarGrupo: true
-                                            });
-                                        }}
-                                        onChange={() => { }}
+                            <div className="d-flex flex-wrap gap-2 mb-3">
+                                {gruposSelecionados.map(grupo => (
+                                    <ChipGrupo
+                                        key={grupo.CODIGO}
+                                        grupo={grupo}
+                                        onRemove={() => removerGrupo(grupo)}
                                     />
-                                </Col>
-                            </Row>
-
-                            <Row>
-                                <Col md={8}>
-                                    <InputComponent
-                                        text="Grupo final"
-                                        type="number"
-                                        value={
-                                            grupoFinal
-                                                ? String(grupoFinal.CODIGO)
-                                                : ""
-                                        }
-                                        error={error.grupoFinal}
-                                        rightText={
-                                            grupoFinal
-                                                ? grupoFinal.DESCRICAO
-                                                : ""
-                                        }
-                                        buttonText="Selecionar grupo"
-                                        bloqueado
-                                        onClick={() => {
-                                            setCampoSelecionado("final");
-                                            setAbrirModal({
-                                                pesquisarGrupo: true
-                                            });
-                                        }}
-                                        onChange={() => { }}
-                                    />
-                                </Col>
-                            </Row>
+                                ))}
+                            </div>
 
                             <Row>
                                 <Col md={5}>
                                     <InputComponent
-                                        text="Fator"
+                                        text="Percentual"
                                         type="number"
-                                        value={fator}
+                                        value={percentual}
                                         error={error.fator}
-                                        onChange={(e) => setFator(e.target.value)}
+                                        onChange={(e) => setPercentual(e.target.value)}
                                     />
+                                </Col>
+                                <Col>
+                                    <div className="d-flex gap-3">
+                                        <Button variant="info"
+                                            onClick={() => setModalSelecionarGrupos(true)}
+                                        >
+                                            Selecionar grupo
+                                        </Button>
+                                        <Button variant="secondary"
+                                            onClick={() => setGruposSelecionados([])}
+                                        >
+                                            Limpar
+                                        </Button>
+                                    </div>
                                 </Col>
                             </Row>
 
@@ -205,7 +222,7 @@ export default function ModalAtualizarPreco({
                                     "Data do cadastro",
                                     "Valor"
                                 ]}
-                                dados={produtos.map(g => [
+                                dados={produtosFiltrados.map(g => [
                                     String(g.CODIGO),
                                     g.DESCRICAO,
                                     String(g.CODIGO_GRUPO),
@@ -219,7 +236,9 @@ export default function ModalAtualizarPreco({
 
                 </Modal.Body>
                 <Modal.Footer className="d-flex justify-content-between">
-                    <Button variant="primary">
+                    <Button variant="primary"
+                        onClick={handleAtualizarPreceos}
+                    >
                         <Gear className="me-2" />
                         Atualização
                     </Button>
@@ -233,24 +252,11 @@ export default function ModalAtualizarPreco({
                 </Modal.Footer>
             </Modal>
 
-            <ModalSelecionarGrupo
-                show={abrirModal.pesquisarGrupo}
-                onHide={() =>
-                    setAbrirModal({
-                        pesquisarGrupo: false
-                    })
-                }
-                onSelect={(grupo) => {
-                    if (campoSelecionado === "inicial") {
-                        setGrupoInicial(grupo);
-                    } else {
-                        setGrupoFinal(grupo);
-                    }
-
-                    setAbrirModal({
-                        pesquisarGrupo: false
-                    });
-                }}
+            <ModalSelecionarVariosGrupos
+                show={modalSelecionarGrupos}
+                onHide={() => setModalSelecionarGrupos(false)}
+                gruposSelecionados={gruposSelecionados}
+                onSelect={setGruposSelecionados}
             />
         </>
     );

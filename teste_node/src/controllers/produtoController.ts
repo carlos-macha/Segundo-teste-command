@@ -6,7 +6,7 @@ import {
 
 import ProdutoService from "../services/produtoService"
 
-import { ProdutoBody, ProdutoParams } from "../types/produtoType"
+import { AtualizarPrecoBody, ProdutoBody, ProdutoParams } from "../types/produtoType"
 
 class ProdutoController {
 
@@ -132,6 +132,38 @@ class ProdutoController {
                 await this.produtoService.deletar(CODIGO);
 
             return res.json(result)
+
+        } catch (error) {
+
+            next(error)
+        }
+    }
+
+    public atualizarPrecos = async (
+        req: Request<{}, {}, AtualizarPrecoBody>,
+        res: Response,
+        next: NextFunction
+    ) => {
+
+        try {
+
+            const {
+                GRUPOS,
+                OPERACAO,
+                PERCENTUAL
+            } = req.body;
+
+
+            const produtos =
+                await this.produtoService.atualizarPrecos(
+                    GRUPOS,
+                    OPERACAO,
+                    PERCENTUAL
+                );
+
+
+            return res.json(produtos);
+
 
         } catch (error) {
 

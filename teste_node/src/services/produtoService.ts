@@ -236,6 +236,89 @@ class ProdutoService {
             )
         })
     }
+
+    async atualizarPrecos(
+        grupos: number[],
+        operacao: "aumentar" | "diminuir",
+        percentual: number
+    ): Promise<Produto[]> {
+
+        const db = await connectDatabase()
+
+        return new Promise((resolve, reject) => {
+
+            const fator = percentual / 100;
+
+            let calculo = "";
+
+            if (operacao === "aumentar") {
+
+                calculo = `
+                VALOR + (VALOR * ?)
+            `;
+
+            } else {
+
+                calculo = `
+                VALOR - (VALOR * ?)
+            `;
+            }
+
+
+            db.query(
+                `
+            UPDATE PRODUTO
+            SET VALOR = ${calculo}
+            WHERE CODIGO_GRUPO IN (${grupos.map(() => "?").join(",")})
+            RETURNING 
+                CODIGO,
+                DESCRICAO,
+                CODIGO_GRUPO,
+                DATA_CADASTRO,
+                VALOR
+            `,
+                [
+                    fator,
+                    ...grupos
+                ],
+
+                (
+                    err: Error | null,
+                    result: Produto[]
+                ) => {
+
+                    db.detach()
+
+                    if (err) {
+
+                        reject(
+                            new HttpError(
+                                500,
+                                err.message
+                            )
+                        )
+
+                        return
+                    }
+
+                    if (!result || result.length === 0) {
+                        reject(
+                            new HttpError(
+                                404,
+                                "Nenhum produto foi encontrado para os grupos informados."
+                            )
+                        )
+                        
+                        return
+                    }
+
+
+                    resolve(result)
+                }
+            )
+        })
+    }
+
 }
 
 export default ProdutoService

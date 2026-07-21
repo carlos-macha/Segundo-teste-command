@@ -5,6 +5,16 @@
     overflow-y: auto;
 }
 
+#table-wrapper table th,
+#table-wrapper table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+#table-wrapper table td {
+    text-align: center;
+}
+
 #table-wrapper tbody tr {
     cursor: pointer;
 } 

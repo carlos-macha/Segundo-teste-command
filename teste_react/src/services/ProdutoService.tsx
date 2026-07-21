@@ -54,3 +54,20 @@ export async function editarProduto(
 
     return response.data;
 }
+
+export async function atualizarPreco(
+    grupos: number[],
+    operacao: "aumentar" | "diminuir",
+    percentual: number
+) {
+    const response = await api.put(
+        "/atualizar-precos",
+        {
+           GRUPOS: grupos,
+           OPERACAO: operacao,
+           PERCENTUAL: percentual
+        }
+    )
+
+    return response.data
+}
