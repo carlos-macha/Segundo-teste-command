@@ -33,7 +33,7 @@ export default function ModalAtualizarPreco({
 
     const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[]>([])
     const [gruposSelecionados, setGruposSelecionados] = useState<Grupo[]>([]);
-    const { produtos, loading } = useData()
+    const { produtos, loading, carregarProdutos } = useData()
     const { showToast } = useToast()
 
     const [error, setError] = useState({
@@ -91,7 +91,8 @@ export default function ModalAtualizarPreco({
             setLoadingAtuaalizacao(true)
             await atualizarPreco(grupos, opcao, Number(percentual))
             showToast("Sucesso em atualizar preço.", "success")
-            fecharModal()
+            limparCampos()
+            carregarProdutos()
         } catch (e) {
 
             if (axios.isAxiosError(e)) {
@@ -242,10 +243,7 @@ export default function ModalAtualizarPreco({
                         <Gear className="me-2" />
                         Atualização
                     </Button>
-                    <Button onClick={() => {
-                        limparCampos()
-                        onHide()
-                    }}>
+                    <Button onClick={fecharModal}>
                         <BoxArrowRight className="me-2" />
                         Sair
                     </Button>

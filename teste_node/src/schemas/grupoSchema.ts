@@ -4,7 +4,7 @@ export const groupSchema = z.object({
     descricao: z
         .string()
         .min(
-            3,
+            2,
             "Descrição deve ter no mínimo 3 caracteres"
         )
         .max(

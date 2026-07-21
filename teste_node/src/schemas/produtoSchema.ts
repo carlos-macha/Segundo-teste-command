@@ -4,7 +4,7 @@ export const productSchema = z.object({
 
     descricao: z
         .string()
-        .min(3, "Descrição deve ter no mínimo 3 caracteres"),
+        .min(2, "Descrição deve ter no mínimo 3 caracteres"),
 
     codigo_grupo: z
         .number(),
